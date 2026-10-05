@@ -63,15 +63,15 @@ class Parser {
         const doc = LoadDoc(html);
         
         const results: $app.SearchResult[] = [];
-        const items = doc.Find(SELECTORS.SEARCH_ITEM);
+        const items = doc.find(SELECTORS.SEARCH_ITEM);
         
-        items.Each((_i: number, s: any) => {
-            const titleEl = s.Find(SELECTORS.SEARCH_TITLE);
-            let title = titleEl.Text().trim();
+        items.each((_i: number, s: any) => {
+            const titleEl = s.find(SELECTORS.SEARCH_TITLE);
+            let title = titleEl.text().trim();
             // Clean the title to help Seanime match it
             title = title.replace(/\s*(?:\(\d{4}\)|Season|BluRay|HD|Multi Audio|Dual Audio|Hindi|Tamil|Telugu|\[).*$/i, '').replace(/[\(\)-]+$/, '').trim();
 
-            const url = titleEl.Attr("href");
+            const url = titleEl.attr("href");
             
             if (!title || !url) return;
             
@@ -95,12 +95,12 @@ class Parser {
         const doc = LoadDoc(html);
         
         const episodes: $app.EpisodeDetails[] = [];
-        const links = doc.Find(SELECTORS.EPISODE_LINK);
+        const links = doc.find(SELECTORS.EPISODE_LINK);
         
         const seenUrls = new Set<string>();
         
-        links.Each((_i: number, s: any) => {
-            const epUrl = s.Attr("href");
+        links.each((_i: number, s: any) => {
+            const epUrl = s.attr("href");
             // Skip non-archive links (e.g. /category/movie/)
             if (!epUrl || seenUrls.has(epUrl) || !epUrl.includes('archive.toonworld4all')) return;
             seenUrls.add(epUrl);
