@@ -1,14 +1,14 @@
 {
-  "id": "toonworld4all",
-  "name": "ToonWorld4All",
-  "version": "1.0.4",
+  "id": "watchanimeworld",
+  "name": "WatchAnimeWorld",
+  "version": "1.0.0",
   "manifestURI": "https://raw.githubusercontent.com/anima09world-svg/seanime/main/manifest.json",
   "language": "typescript",
   "type": "onlinestream-provider",
-  "description": "Provider for ToonWorld4All (Hindi/Multi-Audio Anime)",
+  "description": "Provider for WatchAnimeWorld (Hindi/Multi-Audio Anime)",
   "author": "displaygamer",
   "icon": "https://raw.githubusercontent.com/anima09world-svg/seanime/main/icon.jpg",
-  "website": "https://toonworld4all.me/",
+  "website": "https://watchanimeworld.one/",
   "readme": "https://raw.githubusercontent.com/anima09world-svg/seanime/main/README.md",
   "lang": "hi",
   "payloadURI": "https://raw.githubusercontent.com/anima09world-svg/seanime/main/payload.ts",
@@ -17,16 +17,11 @@
     "requiresConfig": false,
     "fields": [
       {
-        "type": "text",
-        "name": "baseUrl",
-        "label": "Site domain (Change if blocked)",
-        "default": "https://toonworld4all.me"
-      },
-      {
-        "type": "text",
-        "name": "archiveUrl",
-        "label": "Archive Domain (Video links)",
-        "default": "https://archive.toonworld4all.me"
+        "key": "baseUrl",
+        "title": "Base URL",
+        "type": "string",
+        "default": "https://watchanimeworld.one",
+        "description": "The base URL for WatchAnimeWorld."
       }
     ]
   }

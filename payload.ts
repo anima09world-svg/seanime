@@ -4,23 +4,17 @@ function getBaseUrl() {
         const v = $getUserPreference("baseUrl");
         if (v && v.trim().length > 0) return v.replace(/\/+$/, "");
     } catch (e) {}
-    return "https://toonworld4all.me";
-}
-
-function getArchiveUrl() {
-    try {
-        const v = $getUserPreference("archiveUrl");
-        if (v && v.trim().length > 0) return v.replace(/\/+$/, "");
-    } catch (e) {}
-    return "https://archive.toonworld4all.me";
+    return "https://watchanimeworld.one";
 }
 
 const SELECTORS = {
-    SEARCH_ITEM: "article.post",
-    SEARCH_TITLE: "h2.entry-title a",
-    SEARCH_LINK: "h2.entry-title a",
-    SEARCH_IMAGE: ".herald-post-thumbnail img",
-    EPISODE_LINK: "a[href*='/episode/'], a[href*='/movie/']",
+    SEARCH_ITEM: "article.post, article.item",
+    SEARCH_TITLE: ".entry-title",
+    SEARCH_LINK: "a.lnk-blk, a[rel='bookmark']",
+    EPISODE_ITEM: "article.episodes",
+    EPISODE_LINK: "a.lnk-blk",
+    EPISODE_NUMBER: ".num-epi",
+    EPISODE_TITLE: ".entry-title"
 };
 
 const HEADERS = {
@@ -29,25 +23,29 @@ const HEADERS = {
 };
 
 // normalizer
-function extractEpisodeInfoFromUrl(url: string): { season: number; episode: number } {
-    const regex = /(\d+)x(\d+)[^/]*$/i;
-    const match = url.match(regex);
-    if (match) {
+function extractEpisodeInfo(url: string, title: string): { season: number; episode: number } {
+    let season = 1;
+    let episode = 1;
+    
+    // Check url like ...-16x349/
+    const urlMatch = url.match(/(\d+)x(\d+)[^/]*$/i);
+    if (urlMatch) {
         return {
-            season: parseInt(match[1], 10),
-            episode: parseInt(match[2], 10),
+            season: parseInt(urlMatch[1], 10),
+            episode: parseInt(urlMatch[2], 10),
         };
     }
-    return { season: 1, episode: 1 };
-}
 
-function extractTitleFromUrl(url: string): string {
-    const parts = url.split('/');
-    const lastPart = parts.filter(p => p.length > 0).pop();
-    if (lastPart) {
-        return lastPart.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+    // Check title like "16x349"
+    const titleMatch = title.match(/(\d+)x(\d+)/i);
+    if (titleMatch) {
+        return {
+            season: parseInt(titleMatch[1], 10),
+            episode: parseInt(titleMatch[2], 10),
+        };
     }
-    return "Unknown Title";
+    
+    return { season, episode };
 }
 
 // parser
@@ -71,9 +69,10 @@ class Parser {
             // Clean the title to help Seanime match it
             title = title.replace(/\s*(?:\(\d{4}\)|Season|BluRay|HD|Multi Audio|Dual Audio|Hindi|Tamil|Telugu|\[).*$/i, '').replace(/[\(\)-]+$/, '').trim();
 
-            const url = titleEl.attr("href");
+            const url = s.find(SELECTORS.SEARCH_LINK).attr("href");
             
-            if (!title || !url) return;
+            // Skip episodes in search results if they show up
+            if (!title || !url || url.includes('/episode/')) return;
             
             results.push({
                 id: url,
@@ -95,27 +94,30 @@ class Parser {
         const $ = LoadDoc(html);
         
         const episodes: $app.EpisodeDetails[] = [];
-        const links = $(SELECTORS.EPISODE_LINK);
+        const items = $(SELECTORS.EPISODE_ITEM);
         
         const seenUrls = new Set<string>();
         
-        links.each((_i: number, s: any) => {
-            const epUrl = s.attr("href");
-            // Skip non-archive links (e.g. /category/movie/)
-            if (!epUrl || seenUrls.has(epUrl) || !epUrl.includes('archive.toonworld4all')) return;
+        items.each((_i: number, s: any) => {
+            const epUrl = s.find(SELECTORS.EPISODE_LINK).attr("href");
+            if (!epUrl || seenUrls.has(epUrl)) return;
             seenUrls.add(epUrl);
             
-            const { season, episode } = extractEpisodeInfoFromUrl(epUrl);
+            const numStr = s.find(SELECTORS.EPISODE_NUMBER).text().trim();
+            const epTitle = s.find(SELECTORS.EPISODE_TITLE).text().trim();
+            
+            const { season, episode } = extractEpisodeInfo(epUrl, numStr);
             
             episodes.push({
                 id: epUrl, 
                 number: episode,
                 url: epUrl,
-                title: `Season ${season} Episode ${episode}`
+                title: epTitle || `Season ${season} Episode ${episode}`
             });
         });
         
-        return episodes;
+        // Reverse because usually they are listed newest first, Seanime likes oldest first
+        return episodes.reverse();
     }
     
     async extractVideoSources(episodeUrl: string): Promise<$app.EpisodeServer[]> {
@@ -124,68 +126,60 @@ class Parser {
             throw new Error(`Failed to fetch episode page: ${req.status}`);
         }
         const html = await req.text();
+        const $ = LoadDoc(html);
         
-        const regex = /window\.__PROPS__\s*=\s*(\{.*?\})\s*;/s;
-        const match = html.match(regex);
-        if (!match) {
-            throw new Error("Could not find episode data in page.");
+        const iframeSrc = $('iframe[src*="/dub-player/"]').attr('src');
+        if (!iframeSrc) {
+            throw new Error("Could not find video player iframe.");
         }
         
-        const props = JSON.parse(match[1]);
-        const data = props.data?.data;
-        if (!data) {
-            throw new Error("Invalid episode data format.");
+        const embedUrl = iframeSrc.startsWith("http") ? iframeSrc : `${getBaseUrl()}${iframeSrc}`;
+        
+        const embedReq = await fetch(embedUrl, { headers: { ...HEADERS, "Referer": episodeUrl }});
+        const embedHtml = await embedReq.text();
+        
+        // Look for var CONFIG = {...}
+        const configMatch = embedHtml.match(/var\s+CONFIG\s*=\s*(\{.*?\});/);
+        if (!configMatch) {
+            throw new Error("Could not find AbyssPlayer config in embed.");
         }
         
-        const videoSources: $app.VideoSource[] = [];
-        
-        if (data.streams && Array.isArray(data.streams)) {
-            for (const stream of data.streams) {
-                if (stream.play) {
-                    const langs = (stream.languages || []).map((l: any) => l.large || l.code).join(", ");
-                    videoSources.push({
-                        url: stream.play,
-                        type: "unknown",
-                        quality: "Auto",
-                        label: langs || "Multi-Audio",
-                        subtitles: []
-                    });
-                }
-            }
+        let config;
+        try {
+            config = JSON.parse(configMatch[1]);
+        } catch(e) {
+            throw new Error("Failed to parse player config.");
         }
         
-        if (data.encodes && Array.isArray(data.encodes)) {
-            for (const encode of data.encodes) {
-                const resolution = encode.resolution || "Unknown";
-                const isHq = encode.is_hq ? " HQ" : "";
+        const servers: $app.EpisodeServer[] = [];
+        
+        if (config.ready && typeof config.ready === 'object') {
+            for (const langKey of Object.keys(config.ready)) {
+                const videoId = config.ready[langKey];
+                const langName = config.lang && config.lang[langKey] ? config.lang[langKey].name : langKey;
+                const abyssUrl = config.prefix + videoId;
                 
-                if (encode.files && Array.isArray(encode.files)) {
-                    for (const file of encode.files) {
-                        if (file.link && file.host) {
-                            const fileUrl = file.link.startsWith("http") 
-                                ? file.link 
-                                : `${getArchiveUrl()}${file.link}`;
-                            
-                            videoSources.push({
-                                url: fileUrl,
-                                type: "unknown",
-                                quality: `${resolution}${isHq}`,
-                                label: file.host,
-                                subtitles: []
-                            });
+                servers.push({
+                    server: `AbyssPlayer (${langName})`,
+                    headers: { "Referer": getBaseUrl() },
+                    videoSources: [
+                        {
+                            url: abyssUrl,
+                            type: "abyss", // We'll set this and hope Seanime has an abyss extractor, or it tries to play it as a generic URL
+                            quality: "Auto",
+                            label: langName,
+                            subtitles: []
                         }
-                    }
-                }
+                    ]
+                });
             }
         }
         
-        return [
-            {
-                server: "ToonWorld4All",
-                headers: { "Referer": `${getArchiveUrl()}/` },
-                videoSources: videoSources
-            }
-        ];
+        if (servers.length === 0) {
+            throw new Error("No ready streams found in config.");
+        }
+        
+        return servers;
     }
 }
 
@@ -195,7 +189,7 @@ class Provider implements $app.AnimeProvider {
 
     getSettings(): $app.Settings {
         return { 
-            episodeServers: ["ToonWorld4All"], 
+            episodeServers: ["AbyssPlayer (Hindi)", "AbyssPlayer (Tamil)", "AbyssPlayer (Telugu)", "AbyssPlayer (Malayalam)", "AbyssPlayer (Bengali)", "AbyssPlayer (English)", "AbyssPlayer (Japanese)"], 
             supportsDub: true 
         };
     }
@@ -219,6 +213,13 @@ class Provider implements $app.AnimeProvider {
     async findEpisodeServer(episode: $app.EpisodeDetails, server: string): Promise<$app.EpisodeServer> {
         try {
             const servers = await this.parser.extractVideoSources(episode.id);
+            // Since there can be multiple languages, try to match the requested server name
+            for (const srv of servers) {
+                if (srv.server === server) {
+                    return srv;
+                }
+            }
+            // Fallback to first if not found
             if (servers.length > 0) {
                 return servers[0];
             }
