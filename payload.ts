@@ -20,7 +20,7 @@ const SELECTORS = {
     SEARCH_TITLE: "h2.entry-title a",
     SEARCH_LINK: "h2.entry-title a",
     SEARCH_IMAGE: ".herald-post-thumbnail img",
-    EPISODE_LINK: "a[href*='/episode/']",
+    EPISODE_LINK: "a[href*='/episode/'], a[href*='/movie/']",
 };
 
 const HEADERS = {
@@ -67,7 +67,10 @@ class Parser {
         
         items.Each((_i: number, s: any) => {
             const titleEl = s.Find(SELECTORS.SEARCH_TITLE);
-            const title = titleEl.Text().trim();
+            let title = titleEl.Text().trim();
+            // Clean the title to help Seanime match it
+            title = title.replace(/\s*(?:\(\d{4}\)|Season|BluRay|HD|Multi Audio|Dual Audio|Hindi|Tamil|Telugu|\[).*$/i, '').replace(/[\(\)-]+$/, '').trim();
+
             const url = titleEl.Attr("href");
             
             if (!title || !url) return;
@@ -98,7 +101,8 @@ class Parser {
         
         links.Each((_i: number, s: any) => {
             const epUrl = s.Attr("href");
-            if (!epUrl || seenUrls.has(epUrl)) return;
+            // Skip non-archive links (e.g. /category/movie/)
+            if (!epUrl || seenUrls.has(epUrl) || !epUrl.includes('archive.toonworld4all')) return;
             seenUrls.add(epUrl);
             
             const { season, episode } = extractEpisodeInfoFromUrl(epUrl);
@@ -200,7 +204,7 @@ class Provider implements $app.AnimeProvider {
         try {
             return await this.parser.searchAnime(opts.query);
         } catch (e: any) {
-            throw new Error(e.message || String(e));
+            throw String(e.message || e);
         }
     }
 
@@ -208,7 +212,7 @@ class Provider implements $app.AnimeProvider {
         try {
             return await this.parser.getEpisodes(id);
         } catch (e: any) {
-            throw new Error(e.message || String(e));
+            throw String(e.message || e);
         }
     }
 
@@ -218,9 +222,9 @@ class Provider implements $app.AnimeProvider {
             if (servers.length > 0) {
                 return servers[0];
             }
-            throw new Error("No video sources found for this episode.");
+            throw "No video sources found for this episode.";
         } catch (e: any) {
-            throw new Error(e.message || String(e));
+            throw String(e.message || e);
         }
     }
 }
