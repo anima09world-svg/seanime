@@ -1,0 +1,15 @@
+{
+  "id": "toonworld4all",
+  "name": "ToonWorld4All",
+  "version": "1.0.0",
+  "manifestURI": "https://raw.githubusercontent.com/anima09world-svg/seanime/main/manifest.json",
+  "language": "typescript",
+  "type": "onlinestream-provider",
+  "description": "Provider for ToonWorld4All (Hindi/Multi-Audio Anime)",
+  "author": "Antigravity",
+  "icon": "https://toonworld4all.me/wp-content/uploads/2020/02/Toonworld4all-logo.png",
+  "website": "https://toonworld4all.me/",
+  "readme": "https://raw.githubusercontent.com/anima09world-svg/seanime/main/README.md",
+  "lang": "hi",
+  "payloadURI": "https://raw.githubusercontent.com/anima09world-svg/seanime/main/code.js"
+}
