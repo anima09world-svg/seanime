@@ -2,6 +2,8 @@
 
 A Seanime provider extension for scraping anime from [ToonWorld4All](https://toonworld4all.me/). It extracts multi-audio, dual-audio, Hindi, Tamil, Telugu, and English anime streams and downloads.
 
+**Author:** displaygamer
+
 ## Features
 
 - Supports Anime search through ToonWorld4All.
