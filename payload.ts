@@ -197,18 +197,30 @@ class Provider implements $app.AnimeProvider {
     }
 
     async search(opts: $app.SearchOptions): Promise<$app.SearchResult[]> {
-        return this.parser.searchAnime(opts.query);
+        try {
+            return await this.parser.searchAnime(opts.query);
+        } catch (e: any) {
+            throw new Error(e.message || String(e));
+        }
     }
 
     async findEpisodes(id: string): Promise<$app.EpisodeDetails[]> {
-        return this.parser.getEpisodes(id);
+        try {
+            return await this.parser.getEpisodes(id);
+        } catch (e: any) {
+            throw new Error(e.message || String(e));
+        }
     }
 
     async findEpisodeServer(episode: $app.EpisodeDetails, server: string): Promise<$app.EpisodeServer> {
-        const servers = await this.parser.extractVideoSources(episode.id);
-        if (servers.length > 0) {
-            return servers[0];
+        try {
+            const servers = await this.parser.extractVideoSources(episode.id);
+            if (servers.length > 0) {
+                return servers[0];
+            }
+            throw new Error("No video sources found for this episode.");
+        } catch (e: any) {
+            throw new Error(e.message || String(e));
         }
-        throw new Error("No video sources found for this episode.");
     }
 }
