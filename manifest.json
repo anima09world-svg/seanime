@@ -11,7 +11,7 @@
   "website": "https://toonworld4all.me/",
   "readme": "https://raw.githubusercontent.com/anima09world-svg/seanime/main/README.md",
   "lang": "hi",
-  "payloadURI": "https://raw.githubusercontent.com/anima09world-svg/seanime/main/code.js",
+  "payloadURI": "https://raw.githubusercontent.com/anima09world-svg/seanime/main/payload.ts",
   "userConfig": {
     "version": 1,
     "requiresConfig": false,

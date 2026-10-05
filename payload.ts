@@ -186,3 +186,6 @@ var Provider = class {
     throw new Error("No video sources found for this episode.");
   }
 };
+export {
+  Provider
+};
