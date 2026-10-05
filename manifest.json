@@ -7,7 +7,7 @@
   "type": "onlinestream-provider",
   "description": "Provider for ToonWorld4All (Hindi/Multi-Audio Anime)",
   "author": "displaygamer",
-  "icon": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 512 512\"><rect width=\"512\" height=\"512\" fill=\"#1e1e2e\" rx=\"100\"/><text x=\"50%\" y=\"50%\" font-family=\"Arial, sans-serif\" font-size=\"200\" font-weight=\"bold\" fill=\"#f38ba8\" text-anchor=\"middle\" dominant-baseline=\"central\">TW4</text></svg>",
+  "icon": "https://raw.githubusercontent.com/anima09world-svg/seanime/main/icon.jpg",
   "website": "https://toonworld4all.me/",
   "readme": "https://raw.githubusercontent.com/anima09world-svg/seanime/main/README.md",
   "lang": "hi",
