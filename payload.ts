@@ -65,8 +65,8 @@ class Parser {
         const results: $app.SearchResult[] = [];
         const items = $(SELECTORS.SEARCH_ITEM);
         
-        items.each((_i: number, el: any) => {
-            const titleEl = $(el).find(SELECTORS.SEARCH_TITLE);
+        items.each((_i: number, s: any) => {
+            const titleEl = s.find(SELECTORS.SEARCH_TITLE);
             let title = titleEl.text().trim();
             // Clean the title to help Seanime match it
             title = title.replace(/\s*(?:\(\d{4}\)|Season|BluRay|HD|Multi Audio|Dual Audio|Hindi|Tamil|Telugu|\[).*$/i, '').replace(/[\(\)-]+$/, '').trim();
@@ -99,8 +99,8 @@ class Parser {
         
         const seenUrls = new Set<string>();
         
-        links.each((_i: number, el: any) => {
-            const epUrl = $(el).attr("href");
+        links.each((_i: number, s: any) => {
+            const epUrl = s.attr("href");
             // Skip non-archive links (e.g. /category/movie/)
             if (!epUrl || seenUrls.has(epUrl) || !epUrl.includes('archive.toonworld4all')) return;
             seenUrls.add(epUrl);
