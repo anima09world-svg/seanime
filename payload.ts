@@ -60,13 +60,13 @@ class Parser {
             throw new Error(`Search failed: ${req.status}`);
         }
         const html = await req.text();
-        const doc = LoadDoc(html);
+        const $ = LoadDoc(html);
         
         const results: $app.SearchResult[] = [];
-        const items = doc.find(SELECTORS.SEARCH_ITEM);
+        const items = $(SELECTORS.SEARCH_ITEM);
         
-        items.each((_i: number, s: any) => {
-            const titleEl = s.find(SELECTORS.SEARCH_TITLE);
+        items.each((_i: number, el: any) => {
+            const titleEl = $(el).find(SELECTORS.SEARCH_TITLE);
             let title = titleEl.text().trim();
             // Clean the title to help Seanime match it
             title = title.replace(/\s*(?:\(\d{4}\)|Season|BluRay|HD|Multi Audio|Dual Audio|Hindi|Tamil|Telugu|\[).*$/i, '').replace(/[\(\)-]+$/, '').trim();
@@ -92,15 +92,15 @@ class Parser {
             throw new Error(`Failed to fetch episodes: ${req.status}`);
         }
         const html = await req.text();
-        const doc = LoadDoc(html);
+        const $ = LoadDoc(html);
         
         const episodes: $app.EpisodeDetails[] = [];
-        const links = doc.find(SELECTORS.EPISODE_LINK);
+        const links = $(SELECTORS.EPISODE_LINK);
         
         const seenUrls = new Set<string>();
         
-        links.each((_i: number, s: any) => {
-            const epUrl = s.attr("href");
+        links.each((_i: number, el: any) => {
+            const epUrl = $(el).attr("href");
             // Skip non-archive links (e.g. /category/movie/)
             if (!epUrl || seenUrls.has(epUrl) || !epUrl.includes('archive.toonworld4all')) return;
             seenUrls.add(epUrl);
