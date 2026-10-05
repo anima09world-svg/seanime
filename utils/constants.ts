@@ -1,5 +1,18 @@
-export const BASE_URL = "https://toonworld4all.me";
-export const ARCHIVE_URL = "https://archive.toonworld4all.me";
+export function getBaseUrl(): string {
+    try {
+        const v = $getUserPreference("baseUrl");
+        if (v && v.trim().length > 0) return v.replace(/\/+$/, "");
+    } catch (e) {}
+    return "https://toonworld4all.me";
+}
+
+export function getArchiveUrl(): string {
+    try {
+        const v = $getUserPreference("archiveUrl");
+        if (v && v.trim().length > 0) return v.replace(/\/+$/, "");
+    } catch (e) {}
+    return "https://archive.toonworld4all.me";
+}
 
 export const SELECTORS = {
     SEARCH_ITEM: "article.post",
@@ -8,7 +21,7 @@ export const SELECTORS = {
     SEARCH_IMAGE: ".herald-post-thumbnail img",
     
     // In anime details page
-    EPISODE_LINK: "a[href*='archive.toonworld4all.me/episode/']",
+    EPISODE_LINK: "a[href*='/episode/']",
 };
 
 export const HEADERS = {

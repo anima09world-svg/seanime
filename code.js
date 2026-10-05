@@ -1,26 +1,41 @@
-// src/onlinestream-provider/toonworld4all/utils/constants.ts
-var BASE_URL = "https://toonworld4all.me";
+// utils/constants.ts
+function getBaseUrl() {
+  try {
+    const v = $getUserPreference("baseUrl");
+    if (v && v.trim().length > 0) return v.replace(/\/+$/, "");
+  } catch (e) {
+  }
+  return "https://toonworld4all.me";
+}
+function getArchiveUrl() {
+  try {
+    const v = $getUserPreference("archiveUrl");
+    if (v && v.trim().length > 0) return v.replace(/\/+$/, "");
+  } catch (e) {
+  }
+  return "https://archive.toonworld4all.me";
+}
 var SELECTORS = {
   SEARCH_ITEM: "article.post",
   SEARCH_TITLE: "h2.entry-title a",
   SEARCH_LINK: "h2.entry-title a",
   SEARCH_IMAGE: ".herald-post-thumbnail img",
-  EPISODE_LINK: "a[href*='archive.toonworld4all.me/episode/']",
+  // In anime details page
+  EPISODE_LINK: "a[href*='/episode/']"
 };
 var HEADERS = {
   "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-  Accept:
-    "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+  "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8"
 };
 
-// src/onlinestream-provider/toonworld4all/utils/normalizer.ts
+// utils/normalizer.ts
 function extractEpisodeInfoFromUrl(url) {
   const regex = /(\d+)x(\d+)[^/]*$/i;
   const match = url.match(regex);
   if (match) {
     return {
       season: parseInt(match[1], 10),
-      episode: parseInt(match[2], 10),
+      episode: parseInt(match[2], 10)
     };
   }
   return { season: 1, episode: 1 };
@@ -34,10 +49,10 @@ function extractTitleFromUrl(url) {
   return "Unknown Title";
 }
 
-// src/onlinestream-provider/toonworld4all/utils/parser.ts
-class Parser {
+// utils/parser.ts
+var Parser = class {
   async searchAnime(query) {
-    const searchUrl = `${BASE_URL}/?s=${encodeURIComponent(query)}`;
+    const searchUrl = `${getBaseUrl()}/?s=${encodeURIComponent(query)}`;
     const req = await fetch(searchUrl, { headers: HEADERS });
     if (!req.ok) {
       throw new Error(`Search failed: ${req.status}`);
@@ -55,7 +70,7 @@ class Parser {
         id: url,
         title,
         url,
-        subOrDub: "dub",
+        subOrDub: "dub"
       });
     });
     return results;
@@ -69,7 +84,7 @@ class Parser {
     const doc = LoadDoc(html);
     const episodes = [];
     const links = doc.Find(SELECTORS.EPISODE_LINK);
-    const seenUrls = new Set();
+    const seenUrls = /* @__PURE__ */ new Set();
     links.Each((_i, s) => {
       const epUrl = s.Attr("href");
       if (!epUrl || seenUrls.has(epUrl)) return;
@@ -78,9 +93,10 @@ class Parser {
       const title = extractTitleFromUrl(epUrl);
       episodes.push({
         id: epUrl,
+        // use the episode URL as ID for findEpisodeServer
         number: episode,
         url: epUrl,
-        title: `Season ${season} Episode ${episode}`,
+        title: `Season ${season} Episode ${episode}`
       });
     });
     return episodes;
@@ -105,15 +121,14 @@ class Parser {
     if (data.streams && Array.isArray(data.streams)) {
       for (const stream of data.streams) {
         if (stream.play) {
-          const langs = (stream.languages || [])
-            .map((l) => l.large || l.code)
-            .join(", ");
+          const langs = (stream.languages || []).map((l) => l.large || l.code).join(", ");
           videoSources.push({
             url: stream.play,
             type: "unknown",
+            // Usually handled automatically or needs specific player
             quality: "Auto",
             label: langs || "Multi-Audio",
-            subtitles: [],
+            subtitles: []
           });
         }
       }
@@ -125,15 +140,13 @@ class Parser {
         if (encode.files && Array.isArray(encode.files)) {
           for (const file of encode.files) {
             if (file.link && file.host) {
-              const fileUrl = file.link.startsWith("http")
-                ? file.link
-                : `https://archive.toonworld4all.me${file.link}`;
+              const fileUrl = file.link.startsWith("http") ? file.link : `${getArchiveUrl()}${file.link}`;
               videoSources.push({
                 url: fileUrl,
                 type: "unknown",
                 quality: `${resolution}${isHq}`,
                 label: file.host,
-                subtitles: [],
+                subtitles: []
               });
             }
           }
@@ -143,20 +156,20 @@ class Parser {
     return [
       {
         server: "ToonWorld4All",
-        headers: { Referer: "https://archive.toonworld4all.me/" },
-        videoSources,
-      },
+        headers: { "Referer": `${getArchiveUrl()}/` },
+        videoSources
+      }
     ];
   }
-}
+};
 
-// src/onlinestream-provider/toonworld4all/code.ts
-class Provider {
+// code.ts
+var Provider = class {
   parser = new Parser();
   getSettings() {
     return {
       episodeServers: ["ToonWorld4All"],
-      supportsDub: true,
+      supportsDub: true
     };
   }
   async search(opts) {
@@ -165,11 +178,14 @@ class Provider {
   async findEpisodes(id) {
     return this.parser.getEpisodes(id);
   }
-  async findEpisodeServer(episode, _server) {
+  async findEpisodeServer(episode, server) {
     const servers = await this.parser.extractVideoSources(episode.id);
     if (servers.length > 0) {
       return servers[0];
     }
     throw new Error("No video sources found for this episode.");
   }
-}
+};
+export {
+  Provider
+};

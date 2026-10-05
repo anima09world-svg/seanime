@@ -1,11 +1,11 @@
-import { BASE_URL, SELECTORS, HEADERS } from "./constants";
+import { getBaseUrl, getArchiveUrl, SELECTORS, HEADERS } from "./constants";
 import { extractEpisodeInfoFromUrl, extractTitleFromUrl } from "./normalizer";
 
 // Types from core.d.ts and onlinestream-provider.d.ts
 export class Parser {
     
     async searchAnime(query: string): Promise<$app.SearchResult[]> {
-        const searchUrl = `${BASE_URL}/?s=${encodeURIComponent(query)}`;
+        const searchUrl = `${getBaseUrl()}/?s=${encodeURIComponent(query)}`;
         const req = await fetch(searchUrl, { headers: HEADERS });
         if (!req.ok) {
             throw new Error(`Search failed: ${req.status}`);
@@ -118,7 +118,7 @@ export class Parser {
                         if (file.link && file.host) {
                             const fileUrl = file.link.startsWith("http") 
                                 ? file.link 
-                                : `https://archive.toonworld4all.me${file.link}`;
+                                : `${getArchiveUrl()}${file.link}`;
                             
                             videoSources.push({
                                 url: fileUrl,
@@ -136,7 +136,7 @@ export class Parser {
         return [
             {
                 server: "ToonWorld4All",
-                headers: { "Referer": "https://archive.toonworld4all.me/" },
+                headers: { "Referer": `${getArchiveUrl()}/` },
                 videoSources: videoSources
             }
         ];

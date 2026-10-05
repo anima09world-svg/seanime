@@ -2,6 +2,7 @@
 // In the actual Seanime runtime, these are provided globally.
 
 declare function LoadDoc(html: string): any;
+declare function $getUserPreference(key: string): string | undefined;
 
 declare namespace $app {
     interface AnimeProvider {
