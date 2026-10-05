@@ -1,6 +1,6 @@
 {
   "name": "watchanimeworld",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "WatchAnimeWorld Provider",
   "main": "index.js",
   "scripts": {

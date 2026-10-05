@@ -1,7 +1,7 @@
 {
   "id": "watchanimeworld",
   "name": "WatchAnimeWorld",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "manifestURI": "https://raw.githubusercontent.com/anima09world-svg/seanime/main/manifest.json",
   "language": "typescript",
   "type": "onlinestream-provider",
@@ -17,11 +17,10 @@
     "requiresConfig": false,
     "fields": [
       {
-        "key": "baseUrl",
-        "title": "Base URL",
-        "type": "string",
-        "default": "https://watchanimeworld.one",
-        "description": "The base URL for WatchAnimeWorld."
+        "name": "baseUrl",
+        "label": "Base URL",
+        "type": "text",
+        "default": "https://watchanimeworld.one"
       }
     ]
   }
