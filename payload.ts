@@ -23,29 +23,18 @@ const HEADERS = {
 };
 
 // normalizer
-function extractEpisodeInfo(url: string, title: string): { season: number; episode: number } {
-    let season = 1;
-    let episode = 1;
-    
-    // Check url like ...-16x349/
-    const urlMatch = url.match(/(\d+)x(\d+)[^/]*$/i);
-    if (urlMatch) {
-        return {
-            season: parseInt(urlMatch[1], 10),
-            episode: parseInt(urlMatch[2], 10),
-        };
-    }
+function extractEpisodeInfo(url: string, title: string): { season: number; episode: number } | null {
+    const input = decodeURIComponent(url + " " + title);
+    let match = input.match(/(?:^|[^\d])(\d{1,2})x(\d{1,4})(?:[^\d]|$)/i);
+    if (match) return { season: parseInt(match[1], 10), episode: parseInt(match[2], 10) };
 
-    // Check title like "16x349"
-    const titleMatch = title.match(/(\d+)x(\d+)/i);
-    if (titleMatch) {
-        return {
-            season: parseInt(titleMatch[1], 10),
-            episode: parseInt(titleMatch[2], 10),
-        };
-    }
-    
-    return { season, episode };
+    match = input.match(/s(?:eason)?\s*0*(\d+)\D+e(?:p(?:isode)?)?\s*0*(\d+)/i);
+    if (match) return { season: parseInt(match[1], 10), episode: parseInt(match[2], 10) };
+
+    match = input.match(/(?:episode|ep)\s*[-:#.]?\s*0*(\d+(?:\.\d+)?)/i);
+    if (match) return { season: 1, episode: Math.floor(parseFloat(match[1])) };
+
+    return null;
 }
 
 // parser
@@ -106,7 +95,9 @@ class Parser {
             const numStr = s.find(SELECTORS.EPISODE_NUMBER).text().trim();
             const epTitle = s.find(SELECTORS.EPISODE_TITLE).text().trim();
             
-            const { season, episode } = extractEpisodeInfo(epUrl, numStr);
+            const info = extractEpisodeInfo(epUrl, numStr + " " + epTitle);
+            if (!info) return;
+            const { season, episode } = info;
             
             episodes.push({
                 id: epUrl, 
@@ -133,9 +124,17 @@ class Parser {
             throw new Error("Could not find video player iframe.");
         }
         
-        const embedUrl = iframeSrc.startsWith("http") ? iframeSrc : `${getBaseUrl()}${iframeSrc}`;
+        let embedUrl: string;
+        try {
+            embedUrl = new URL(iframeSrc, episodeUrl).toString();
+        } catch (_) {
+            throw new Error("Invalid video player iframe URL.");
+        }
         
         const embedReq = await fetch(embedUrl, { headers: { ...HEADERS, "Referer": episodeUrl }});
+        if (!embedReq.ok) {
+            throw new Error(`Player request failed: ${embedReq.status}`);
+        }
         const embedHtml = await embedReq.text();
         
         // Look for var CONFIG = {...}
@@ -157,20 +156,27 @@ class Parser {
             for (const langKey of Object.keys(config.ready)) {
                 const videoId = config.ready[langKey];
                 const langName = config.lang && config.lang[langKey] ? config.lang[langKey].name : langKey;
-                const abyssUrl = config.prefix + videoId;
+                if (!config.prefix || !videoId) continue;
+                const streamUrl = String(config.prefix) + String(videoId);
+                const cleanUrl = streamUrl.split("?")[0].toLowerCase();
+                let sourceType = "unknown";
+                if (cleanUrl.endsWith(".m3u8")) sourceType = "m3u8";
+                else if (cleanUrl.endsWith(".mp4")) sourceType = "mp4";
                 
                 servers.push({
                     server: `AbyssPlayer (${langName})`,
-                    headers: { "Referer": getBaseUrl() },
-                    videoSources: [
-                        {
-                            url: abyssUrl,
-                            type: "abyss", // We'll set this and hope Seanime has an abyss extractor, or it tries to play it as a generic URL
-                            quality: "Auto",
-                            label: langName,
-                            subtitles: []
-                        }
-                    ]
+                    headers: {
+                        "Referer": embedUrl,
+                        "Origin": new URL(embedUrl).origin,
+                        "User-Agent": HEADERS["User-Agent"]
+                    },
+                    videoSources: [{
+                        url: streamUrl,
+                        type: sourceType,
+                        quality: "auto",
+                        label: langName,
+                        subtitles: []
+                    }]
                 });
             }
         }
@@ -219,11 +225,13 @@ class Provider implements $app.AnimeProvider {
                     return srv;
                 }
             }
-            // Fallback to first if not found
-            if (servers.length > 0) {
+            if (server === "default" && servers.length > 0) {
                 return servers[0];
             }
-            throw "No video sources found for this episode.";
+            if (servers.length > 0) {
+                throw new Error(`Requested server "${server}" is unavailable for this episode.`);
+            }
+            throw new Error("No video sources found for this episode.");
         } catch (e: any) {
             throw String(e.message || e);
         }
